@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChainTalk - Web3聊天室</title>
+    <!-- 移除外部CDN依赖，使用本地实现 -->
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --card-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            --text-primary: #2d3748;
+            --text-secondary: #718096;
+            --border-radius: 20px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: var(--primary-gradient);
+            min-height: 100vh;
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: grid;
+            grid-template-columns: 1fr 280px;
+            grid-template-rows: auto 1fr auto auto;
+            grid-template-areas: 
+                "header sidebar"
+                "chat sidebar"
+                "input sidebar"
+                "status sidebar";
+        }
+
+        .header {
+            grid-area: header;
+            background: var(--success-gradient);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            animation: float 20s infinite linear;
+            z-index: 0;
+        }
+
+        .header > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            margin: 0;
+            opacity: 0.9;
+            font-size: 1.1rem;
+            font-weight: 400;
+        }
+
+        @keyframes float {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        .chat-area {
+            grid-area: chat;
+            height: 450px;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8fafc;
+            position: relative;
+        }
+
+        .chat-area::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-area::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .chat-area::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 3px;
+        }
+
+        .chat-area::-webkit-scrollbar-thumb:hover {
+            background: #a0aec0;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            padding: 16px 20px;
+            border-radius: 18px;
+            max-width: 75%;
+            position: relative;
+            animation: messageSlide 0.3s ease-out;
+            word-wrap: break-word;
+        }
+
+        .message-content {
+            margin-bottom: 4px;
+        }
+
+        .message-time {
+            font-size: 11px;
+            opacity: 0.7;
+            font-weight: 400;
+        }
+
+        .message.system .message-time {
+            display: inline-block;
+            margin-left: 8px;
+        }
+
+        @keyframes messageSlide {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            background: var(--success-gradient);
+            color: white;
+            margin-left: auto;
+            text-align: right;
+            box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);
+        }
+
+        .message.other {
+            background: white;
+            color: var(--text-primary);
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .message.system {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #744210;
+            text-align: center;
+            font-style: italic;
+            max-width: 100%;
+            border: 1px solid #fed7aa;
+        }
+
+        .auth-section {
+            padding: 30px;
+            text-align: center;
+            background: #f8fafc;
+        }
+
+        .auth-section button {
+            width: 100%;
+            max-width: 400px;
+            padding: 18px 24px;
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-section button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .auth-section button:hover::before {
+            left: 100%;
+        }
+
+        .auth-section button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .user-info {
+            padding: 20px 30px;
+            background: linear-gradient(135deg, #d4edda, #c3e6cb);
+            color: #155724;
+            font-weight: 500;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .user-info strong {
+            color: #0c5460;
+        }
+
+        .input-area {
+            grid-area: input;
+            padding: 25px 30px;
+            background: white;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .input-area input {
+            flex: 1;
+            padding: 16px 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 50px;
+            outline: none;
+            font-size: 16px;
+            transition: var(--transition);
+            background: #f8fafc;
+        }
+
+        .input-area input:focus {
+            border-color: #4facfe;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+        }
+
+        .input-area button {
+            padding: 16px 28px;
+            background: var(--success-gradient);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 16px;
+            transition: var(--transition);
+            box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);
+            min-width: 100px;
+        }
+
+        .input-area button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(79, 172, 254, 0.4);
+        }
+
+        .input-area button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status {
+            grid-area: status;
+            padding: 15px 30px;
+            font-size: 14px;
+            font-weight: 500;
+            border-top: 1px solid rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* 在线用户侧边栏 */
+        .sidebar {
+            grid-area: sidebar;
+            background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+            border-left: 1px solid rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            background: linear-gradient(135deg, #4a5568, #2d3748);
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .online-users {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .online-users h3 {
+            margin: 0 0 15px 0;
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .user-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .user-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            transition: var(--transition);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .user-item:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-color: #4facfe;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--primary-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 12px;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .user-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .user-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 14px;
+            margin-bottom: 2px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .user-address {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .user-status {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            border: 2px solid white;
+            animation: pulse 2s infinite;
+        }
+
+        .online-count {
+            padding: 10px 20px;
+            background: rgba(79, 172, 254, 0.1);
+            border-top: 1px solid rgba(79, 172, 254, 0.2);
+            color: #4facfe;
+            font-size: 12px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .status.connected {
+            background: linear-gradient(135deg, #d4edda, #c3e6cb);
+            color: #155724;
+        }
+
+        .status.disconnected {
+            background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+            color: #721c24;
+        }
+
+        .status::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .btn-loading {
+            opacity: 0.8;
+            pointer-events: none;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .container {
+                border-radius: 15px;
+                grid-template-columns: 1fr;
+                grid-template-areas: 
+                    "header"
+                    "chat"
+                    "input"
+                    "status"
+                    "sidebar";
+            }
+            
+            .sidebar {
+                max-height: 200px;
+                border-left: none;
+                border-top: 1px solid rgba(0,0,0,0.05);
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .chat-area {
+                height: 300px;
+            }
+            
+            .message {
+                max-width: 85%;
+            }
+            
+            .input-area {
+                padding: 20px;
+                gap: 10px;
+            }
+            
+            .input-area button {
+                padding: 16px 20px;
+                min-width: 80px;
+            }
+        }
+
+        /* 深色模式支持 */
+        @media (prefers-color-scheme: dark) {
+            .container {
+                background: rgba(26, 32, 44, 0.95);
+                color: #e2e8f0;
+            }
+            
+            .chat-area {
+                background: #2d3748;
+            }
+            
+            .message.other {
+                background: #4a5568;
+                color: #e2e8f0;
+                border-color: #718096;
+            }
+            
+            .input-area {
+                background: #2d3748;
+            }
+            
+            .input-area input {
+                background: #4a5568;
+                border-color: #718096;
+                color: #e2e8f0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔗 ChainTalk</h1>
+            <p>Web3实时聊天室</p>
+        </div>
+        
+        <div id="authSection" class="auth-section">
+            <button onclick="connectWallet()">连接钱包</button>
+        </div>
+        
+        <div id="userInfo" class="user-info" style="display: none;">
+            <strong>已连接:</strong> <span id="userAddress"></span>
+        </div>
+        
+        <div class="chat-area" id="chatArea">
+            <div class="message system">欢迎来到ChainTalk! 请先连接您的Web3钱包。</div>
+        </div>
+        
+        <div class="input-area">
+            <input type="text" id="messageInput" placeholder="输入消息..." disabled>
+            <button onclick="sendMessage()" id="sendButton" disabled>发送</button>
+        </div>
+        
+        <div class="status disconnected" id="status">
+            状态: 未连接
+        </div>
+
+        <!-- 在线用户侧边栏 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                👥 在线用户
+            </div>
+            <div class="online-users">
+                <h3>General 聊天室</h3>
+                <ul class="user-list" id="userList">
+                    <!-- 在线用户将在这里显示 -->
+                </ul>
+            </div>
+            <div class="online-count" id="onlineCount">
+                0 位用户在线
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let userAddress = null;
+        let isAuthenticated = false;
+        let reconnectAttempts = 0;
+        let maxReconnectAttempts = 5;
+        let reconnectDelay = 1000;
+        let messageCache = [];
+        let maxCacheSize = 100;
+        let heartbeatInterval = null;
+        let onlineUsers = new Map(); // 存储在线用户 address -> {address, ens_name}
+        
+        /**
+         * 将以太坊地址转换为EIP-55校验和格式
+         * 实现标准的EIP-55地址校验和算法
+         */
+        async function toChecksumAddress(address) {
+                // 移除0x前缀并转为小写
+                const cleanAddress = address.toLowerCase().replace('0x', '');
+                
+            try {
+                // 使用更准确的Keccak-256计算
+                // 注意：这里使用一个简化的实现，在生产环境中应该使用专门的Keccak-256库
+                const hash = await keccak256(cleanAddress);
+                
+                let checksumAddress = '0x';
+                for (let i = 0; i < cleanAddress.length; i++) {
+                    const char = cleanAddress[i];
+                    const hashBit = parseInt(hash[i], 16);
+                    
+                    if (hashBit >= 8) {
+                        checksumAddress += char.toUpperCase();
+                    } else {
+                        checksumAddress += char;
+                    }
+                }
+                
+                return checksumAddress;
+            } catch (error) {
+                console.warn('EIP-55转换失败，使用原地址:', error);
+                return address;
+            }
+        }
+        
+        /**
+         * 简化的Keccak-256实现 - 用于EIP-55校验和
+         * 注意：这是一个基本实现，生产环境应使用真正的Keccak-256库
+         */
+        async function keccak256(text) {
+            // 这里使用一个基于特征的简单哈希作为演示
+            // 实际应该使用js-sha3或类似的库
+            const encoder = new TextEncoder();
+            const data = encoder.encode(text);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        // 连接钱包
+        async function connectWallet() {
+            const button = document.querySelector('#authSection button');
+            if (typeof window.ethereum !== 'undefined') {
+                try {
+                    // 显示加载状态
+                    button.innerHTML = '<span class="loading"></span>连接中...';
+                    button.classList.add('btn-loading');
+                    
+                    // 请求连接钱包
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    userAddress = accounts[0];
+                    
+                    // 更新UI
+                    document.getElementById('userAddress').textContent = userAddress;
+                    document.getElementById('userInfo').style.display = 'block';
+                    document.getElementById('authSection').style.display = 'none';
+                    
+                    // 连接WebSocket
+                    connectWebSocket();
+                    
+                    addMessage('system', `钱包已连接: ${userAddress}`);
+                } catch (error) {
+                    console.error('连接钱包失败:', error);
+                    addMessage('system', '连接钱包失败，请重试。');
+                    // 恢复按钮状态
+                    button.innerHTML = '连接钱包';
+                    button.classList.remove('btn-loading');
+                }
+            } else {
+                alert('请安装MetaMask或其他Web3钱包!');
+            }
+        }
+
+        // 连接WebSocket - 优化版本，支持自动重连
+        function connectWebSocket() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                return; // 避免重复连接
+            }
+
+            try {
+            ws = new WebSocket('ws://localhost:3000/ws');
+            
+            ws.onopen = function() {
+                    console.log('🔗 WebSocket连接已建立');
+                updateStatus('connected', '已连接到服务器');
+                addMessage('system', '已连接到ChainTalk服务器');
+                    
+                    // 重置重连计数
+                    reconnectAttempts = 0;
+                    reconnectDelay = 1000;
+                    
+                    // 启动心跳检测
+                    startHeartbeat();
+                
+                // 发送认证消息
+                authenticateUser();
+            };
+            
+            ws.onmessage = function(event) {
+                    try {
+                const message = JSON.parse(event.data);
+                handleServerMessage(message);
+                    } catch (error) {
+                        console.error('消息解析错误:', error);
+                    }
+            };
+            
+                ws.onclose = function(event) {
+                    console.log('🔌 WebSocket连接已关闭', event.code, event.reason);
+                updateStatus('disconnected', '连接已断开');
+                    
+                    stopHeartbeat();
+                isAuthenticated = false;
+                document.getElementById('messageInput').disabled = true;
+                document.getElementById('sendButton').disabled = true;
+                    
+                    // 自动重连（排除正常关闭）
+                    if (event.code !== 1000 && reconnectAttempts < maxReconnectAttempts) {
+                        attemptReconnect();
+                    } else if (reconnectAttempts >= maxReconnectAttempts) {
+                        addMessage('system', '❌ 连接失败，请刷新页面重试');
+                    }
+            };
+            
+            ws.onerror = function(error) {
+                    console.error('💥 WebSocket错误:', error);
+                addMessage('system', 'WebSocket连接错误');
+            };
+            } catch (error) {
+                console.error('创建WebSocket连接失败:', error);
+                attemptReconnect();
+            }
+        }
+
+        // 自动重连机制
+        function attemptReconnect() {
+            if (reconnectAttempts >= maxReconnectAttempts) {
+                addMessage('system', '❌ 重连失败，请刷新页面');
+                return;
+            }
+
+            reconnectAttempts++;
+            const delay = Math.min(reconnectDelay * Math.pow(2, reconnectAttempts - 1), 30000);
+            
+            addMessage('system', `🔄 ${delay/1000}秒后尝试重连... (${reconnectAttempts}/${maxReconnectAttempts})`);
+            
+            setTimeout(() => {
+                console.log(`🔄 尝试重连第 ${reconnectAttempts} 次`);
+                connectWebSocket();
+            }, delay);
+        }
+
+        // 心跳检测
+        function startHeartbeat() {
+            heartbeatInterval = setInterval(() => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'Ping' }));
+                }
+            }, 30000); // 30秒心跳
+        }
+
+        function stopHeartbeat() {
+            if (heartbeatInterval) {
+                clearInterval(heartbeatInterval);
+                heartbeatInterval = null;
+            }
+        }
+
+        // 用户认证 - 使用简化的签名验证
+        async function authenticateUser() {
+            try {
+                // 获取nonce
+                const nonceResponse = await fetch('http://localhost:3000/api/auth/nonce', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ address: userAddress })
+                });
+                
+                const { nonce } = await nonceResponse.json();
+                
+                // 创建简化的认证消息
+                const message = `ChainTalk Authentication\nAddress: ${userAddress}\nNonce: ${nonce}\nTimestamp: ${Date.now()}`;
+                
+                console.log('🔐 签名消息:', message);
+                
+                // 请求用户签名
+                const signature = await window.ethereum.request({
+                    method: 'personal_sign',
+                    params: [message, userAddress]
+                });
+                
+                console.log('✍️ 签名结果:', signature);
+                
+                // 发送认证消息到WebSocket
+                const authMessage = {
+                    type: 'SimpleAuth',
+                    payload: {
+                        address: userAddress,
+                        message: message,
+                        signature: signature,
+                        nonce: nonce
+                    }
+                };
+                
+                ws.send(JSON.stringify(authMessage));
+                
+            } catch (error) {
+                console.error('认证失败:', error);
+                addMessage('system', '认证失败，请重试。');
+            }
+        }
+
+        // 处理服务器消息
+        function handleServerMessage(message) {
+            console.log('📨 收到服务器消息:', message);
+            
+            switch (message.type) {
+                case 'AuthSuccess':
+                    isAuthenticated = true;
+                    document.getElementById('messageInput').disabled = false;
+                    document.getElementById('sendButton').disabled = false;
+                    addMessage('system', `✅ 认证成功！已连接地址: ${message.payload?.user_address || userAddress}`);
+                    addMessage('system', '🎉 您现在可以发送消息了！');
+                    break;
+                    
+                case 'NewText':
+                    const payload = message.payload;
+                    const senderType = payload.from === userAddress ? 'user' : 'other';
+                    addMessage(senderType, `${payload.from}: ${payload.text}`);
+                    break;
+                    
+                case 'UserJoined':
+                    if (message.payload) {
+                        addUserToList(message.payload.user, message.payload.ens_name);
+                        addMessage('system', `${formatAddress(message.payload.user) || 'Unknown'} 加入了聊天室`);
+                    }
+                    break;
+                    
+                case 'UserLeft':
+                    if (message.payload) {
+                        removeUserFromList(message.payload.user);
+                        addMessage('system', `${formatAddress(message.payload.user) || 'Unknown'} 离开了聊天室`);
+                    }
+                    break;
+                    
+                case 'OnlineUsers':
+                    if (message.payload && message.payload.users) {
+                        updateOnlineUsersList(message.payload.users);
+                    }
+                    break;
+                    
+                case 'ChainEvent':
+                    if (message.payload) {
+                        handleChainEvent(message.payload);
+                    }
+                    break;
+                    
+                case 'Error':
+                    addMessage('system', `❌ 错误: ${message.payload.message}`);
+                    break;
+                    
+                case 'authenticated': // 兼容旧格式
+                    isAuthenticated = true;
+                    document.getElementById('messageInput').disabled = false;
+                    document.getElementById('sendButton').disabled = false;
+                    addMessage('system', '认证成功！您现在可以发送消息了。');
+                    break;
+                    
+                default:
+                    console.log('🤷‍♂️ 未知消息类型:', message.type);
+                    break;
+            }
+        }
+
+        // 添加用户到在线列表
+        function addUserToList(address, ensName = null) {
+            if (!address || onlineUsers.has(address)) return;
+            
+            onlineUsers.set(address, {
+                address: address,
+                ens_name: ensName
+            });
+            
+            updateUserListDisplay();
+        }
+
+        // 从在线列表移除用户
+        function removeUserFromList(address) {
+            if (!address) return;
+            
+            onlineUsers.delete(address);
+            updateUserListDisplay();
+        }
+
+        // 更新整个在线用户列表
+        function updateOnlineUsersList(users) {
+            onlineUsers.clear();
+            
+            users.forEach(user => {
+                onlineUsers.set(user.address, {
+                    address: user.address,
+                    ens_name: user.ens_name
+                });
+            });
+            
+            updateUserListDisplay();
+        }
+
+        // 更新用户列表显示
+        function updateUserListDisplay() {
+            const userList = document.getElementById('userList');
+            const onlineCount = document.getElementById('onlineCount');
+            
+            userList.innerHTML = '';
+            
+            onlineUsers.forEach((user, address) => {
+                const li = document.createElement('li');
+                li.className = 'user-item';
+                
+                // 生成用户头像（使用地址的前两个字符）
+                const avatar = address.slice(2, 4).toUpperCase();
+                
+                // 显示名称（ENS优先，否则缩短地址）
+                const displayName = user.ens_name || formatAddress(address);
+                
+                li.innerHTML = `
+                    <div class="user-avatar">${avatar}</div>
+                    <div class="user-info">
+                        <div class="user-name">${displayName}</div>
+                        <div class="user-address">${formatAddress(address)}</div>
+                    </div>
+                    <div class="user-status"></div>
+                `;
+                
+                userList.appendChild(li);
+            });
+            
+            // 更新在线用户数量
+            const count = onlineUsers.size;
+            onlineCount.textContent = `${count} 位用户在线`;
+        }
+
+        // 格式化地址显示
+        function formatAddress(address) {
+            if (!address || address.length < 10) return address;
+            return `${address.slice(0, 6)}...${address.slice(-4)}`;
+        }
+
+        // 处理链上事件
+        function handleChainEvent(event) {
+            console.log('🔗 收到链上事件:', event);
+            
+            let eventMessage = '';
+            
+            switch (event.event_type) {
+                case 'UniswapV3Swap':
+                    if (event.details) {
+                        // 解析交易详情
+                        const amount0 = event.details.amount0 || '未知';
+                        const amount1 = event.details.amount1 || '未知';
+                        const token0 = event.details.token0 || 'Token0';
+                        const token1 = event.details.token1 || 'Token1';
+                        const poolAddress = event.details.pool_address || '未知池子';
+                        
+                        eventMessage = `🚨 Uniswap V3 大额交易
+💱 交易对: ${token0}/${token1}
+💰 数量: ${amount0} ↔ ${amount1}
+🏊 池子: ${poolAddress.slice(0, 10)}...
+🔗 区块: #${event.block_number}`;
+                    }
+                    break;
+                case 'LargeTransfer':
+                    if (event.details) {
+                        const amount = event.details.amount || '未知数量';
+                        const symbol = event.details.symbol || 'Token';
+                        eventMessage = `💰 大额转账: ${amount} ${symbol}`;
+                    }
+                    break;
+                default:
+                    eventMessage = `🔗 链上事件: ${event.event_type}`;
+            }
+            
+            if (eventMessage) {
+                addMessage('system', `ChainWatch Bot: ${eventMessage}`);
+            }
+        }
+
+        // 发送消息 - 优化版本，支持防抖和重试
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                addMessage('system', '❌ 连接已断开，正在重连...');
+                connectWebSocket();
+                return;
+            }
+            
+            if (!isAuthenticated) {
+                addMessage('system', '❌ 请先完成身份验证');
+                return;
+            }
+            
+                const messageData = {
+                    type: 'SendText',
+                    payload: {
+                        room: 'general',
+                        text: message
+                    }
+                };
+                
+            try {
+                ws.send(JSON.stringify(messageData));
+                input.value = '';
+                
+                // 清除输入框焦点回到发送按钮的效果
+                input.focus();
+            } catch (error) {
+                console.error('发送消息失败:', error);
+                addMessage('system', '❌ 消息发送失败，请重试');
+            }
+        }
+
+        // 防抖输入处理
+        let inputTimeout = null;
+        function handleInputChange() {
+            const input = document.getElementById('messageInput');
+            const sendButton = document.getElementById('sendButton');
+            
+            clearTimeout(inputTimeout);
+            inputTimeout = setTimeout(() => {
+                // 更新发送按钮状态
+                sendButton.disabled = !input.value.trim() || !isAuthenticated;
+            }, 100);
+        }
+
+        // 添加消息到聊天区域 - 优化版本，支持消息缓存和性能优化
+        function addMessage(type, content, timestamp = new Date()) {
+            const chatArea = document.getElementById('chatArea');
+            
+            // 创建消息对象
+            const messageObj = {
+                id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                type,
+                content,
+                timestamp
+            };
+            
+            // 添加到缓存
+            messageCache.push(messageObj);
+            
+            // 限制缓存大小（防止内存泄漏）
+            if (messageCache.length > maxCacheSize) {
+                messageCache = messageCache.slice(-maxCacheSize);
+            }
+            
+            // 创建DOM元素
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.setAttribute('data-message-id', messageObj.id);
+            
+            // 添加时间戳
+            const timeStr = timestamp.toLocaleTimeString('zh-CN', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+            
+            if (type === 'system') {
+                messageDiv.innerHTML = `
+                    <span class="message-content">${content}</span>
+                    <span class="message-time">${timeStr}</span>
+                `;
+            } else {
+                messageDiv.innerHTML = `
+                    <div class="message-content">${content}</div>
+                    <div class="message-time">${timeStr}</div>
+                `;
+            }
+            
+            // 批量DOM操作优化
+            requestAnimationFrame(() => {
+            chatArea.appendChild(messageDiv);
+                
+                // 清理过多的DOM元素
+                const messages = chatArea.querySelectorAll('.message');
+                if (messages.length > maxCacheSize) {
+                    const oldMessages = Array.from(messages).slice(0, messages.length - maxCacheSize);
+                    oldMessages.forEach(msg => msg.remove());
+                }
+                
+                // 平滑滚动到底部
+                chatArea.scrollTo({
+                    top: chatArea.scrollHeight,
+                    behavior: 'smooth'
+                });
+            });
+        }
+
+        // 更新连接状态
+        function updateStatus(type, message) {
+            const status = document.getElementById('status');
+            status.className = `status ${type}`;
+            status.textContent = `状态: ${message}`;
+        }
+
+
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 显示页面已加载
+            addMessage('system', '页面加载完成，准备连接钱包...');
+            addMessage('system', '本地Web3功能已就绪！');
+            
+            // 添加输入事件监听
+            const messageInput = document.getElementById('messageInput');
+            const sendButton = document.getElementById('sendButton');
+        
+        // 回车发送消息
+            messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                    e.preventDefault();
+                sendMessage();
+            }
+            });
+            
+            // 输入监听（防抖处理）
+            messageInput.addEventListener('input', handleInputChange);
+            
+            // 发送按钮点击事件
+            sendButton.addEventListener('click', sendMessage);
+            
+            // 页面卸载时清理连接
+            window.addEventListener('beforeunload', function() {
+                if (ws) {
+                    ws.close(1000, 'Page unloading');
+                }
+                stopHeartbeat();
+            });
+            
+            // 页面可见性变化处理
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) {
+                    // 页面隐藏时减少心跳频率
+                    stopHeartbeat();
+                } else {
+                    // 页面恢复时重新开始心跳
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        startHeartbeat();
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

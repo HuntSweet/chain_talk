@@ -1,0 +1,186 @@
+# ====================
+# Rust
+# ====================
+# 编译产物和构建缓存
+/target/
+**/*.rs.bk
+*.pdb
+
+# Cargo.lock (对于库项目可能不需要提交，但对于可执行项目建议保留)
+# Cargo.lock
+
+# ====================
+# 环境配置和敏感信息
+# ====================
+# 环境变量文件
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.*.local
+
+# 但是保留示例文件（需要提交）
+!.env.example
+
+# 配置文件（可能包含敏感信息）
+config.toml
+config.json
+*.key
+*.pem
+*.p12
+*.pfx
+
+# 数据库文件
+*.db
+*.sqlite
+*.sqlite3
+
+# ====================
+# 日志和临时文件
+# ====================
+# 日志文件
+*.log
+logs/
+log/
+
+# 临时文件
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# 备份文件
+*.backup
+*.bak
+*.orig
+
+# ====================
+# IDE 和编辑器
+# ====================
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.vim
+.vim/
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# ====================
+# 操作系统生成的文件
+# ====================
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# ====================
+# Docker
+# ====================
+# Docker 临时文件
+.dockerignore.backup
+docker-compose.override.yml
+.docker/
+
+# ====================
+# Web 相关
+# ====================
+# Node.js (如果前端有 Node.js 依赖)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+
+# 前端构建产物
+dist/
+build/
+public/build/
+
+# ====================
+# 开发工具
+# ====================
+# 性能分析
+*.prof
+perf.data*
+
+# 测试覆盖率
+coverage/
+*.coverage
+.coverage
+
+# Benchmark 结果
+criterion/
+
+# ====================
+# 部署相关
+# ====================
+# 部署脚本中的敏感信息
+deploy.sh
+.deploy/
+secrets/
+
+# SSL 证书
+*.crt
+*.cert
+*.ca-bundle
+
+# ====================
+# 项目特定
+# ====================
+# Redis 数据文件
+dump.rdb
+*.rdb
+
+# 测试文件
+test_*.html
+*.test.html
+
+# 临时的钱包测试文件
+test-metamask.html
+
+# 运行时生成的文件
+*.pid
+.cache/

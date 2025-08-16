@@ -1,0 +1,58 @@
+[package]
+name = "chaintalk"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Web framework and async runtime
+tokio = { version = "1.0", features = ["full"] }
+axum = { version = "0.7", features = ["ws"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace", "fs"] }
+
+# WebSocket support
+tokio-tungstenite = "0.21"
+futures-util = "0.3"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Blockchain interaction
+ethers = { version = "2.0", features = ["ws", "rustls"] }
+
+# Redis for session management
+redis = { version = "0.24", features = ["tokio-comp"] }
+bb8 = "0.8"
+bb8-redis = "0.14"
+
+# Authentication and JWT
+jsonwebtoken = "9.2"
+siwe = "0.6"
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Environment variables
+dotenv = "0.15"
+
+# UUID generation
+uuid = { version = "1.0", features = ["v4", "serde"] }
+
+# HTTP client
+reqwest = { version = "0.11", features = ["json"] }
+
+# Regular expressions
+regex = "1.0"
+
+# Hex encoding/decoding
+hex = "0.4"
+
+# Async channels
+tokio-stream = "0.1"
