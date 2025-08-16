@@ -184,3 +184,5 @@ test-metamask.html
 # 运行时生成的文件
 *.pid
 .cache/
+
+.specstory
